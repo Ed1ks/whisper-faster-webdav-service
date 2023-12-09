@@ -165,9 +165,11 @@ class WhisperFasterWebDAVService:
             audio_file_list = [x for x in file_list if x[-4:] in transcribe_formats]
             if len(audio_file_list) > 0:
                 model_dir = download_model(self.whisper_model, output_dir=self.whisper_model_dir + '/' + self.whisper_model)
-                model = WhisperModel(model_dir, device="cpu", compute_type="auto", cpu_threads=2)
+                model = WhisperModel(model_dir, device="cpu", compute_type="auto", cpu_threads=1)
 
             for file in audio_file_list:
+                print('transcribe ' + file + '...')
+                start = time.time()
                 if file[-4:] not in transcribe_formats:
                     continue
 
@@ -207,6 +209,9 @@ class WhisperFasterWebDAVService:
 
                 # remove audio file
                 os.remove(f'{self.audio_dir}/{file}')
+
+                end = time.time()
+                print(f'transcription of {file} finished in {timedelta(seconds=end-start)} (HH:mm:ss)')
             return True
         except (BaseException, ) as e:
             print(e)
