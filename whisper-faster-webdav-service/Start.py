@@ -4,6 +4,7 @@ import pathlib
 import schedule
 import datetime
 import time
+from dotenv import load_dotenv
 
 from faster_whisper import WhisperModel, download_model
 import easywebdav
@@ -238,8 +239,8 @@ class WhisperFasterWebDAVService:
             return False
 
 if __name__ == '__main__':
+    load_dotenv()
     service = WhisperFasterWebDAVService()
-
     
     try:
         runonstart = os.environ['W_RUN_ON_START']
