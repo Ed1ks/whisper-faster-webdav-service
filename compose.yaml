@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+
+  whisper-faster-webdav-service:
+    container_name: whisper-faster-webdav-service
+    image: whisper-faster-webdav-service:latest
+    environment:
+      TZ: 'Europe/Berlin'
+      W_DOMAIN: 'my.domain.com'
+      W_USERNAME: 'myusername'
+      W_PASSWORD: 'mypassword'
+      W_ROOT_PATH: '/dav.php/%40Home/'
+      W_WHISPER_MODEL: 'large-v2'
+      W_RUN_ON_START: True
+      PYTHONUNBUFFERED: 1
+    volumes:
+        - wfws_data:/whisper-faster-webdav-service
+
+volumes:
+    wfws_data:
