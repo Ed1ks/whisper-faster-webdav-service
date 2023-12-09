@@ -21,6 +21,8 @@ see example in compose.yaml
 ## How To Install
 1. use docker-compose so the whisper-faster-webdav-service will be created
 2. upload all .py files inside this volume
+   
    2.5. you can tweak settings for transcription inside of Start.py (e.g. cpu cores, gpu etc.)
+   
    2.6. you can create an .env file in this volume, or else use docker compose
 4. restart container
