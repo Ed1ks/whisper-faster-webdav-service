@@ -7,6 +7,8 @@ Both - the .srt and the .lrc files will be uploaded back to the webdav applicati
 
 This is an service meant to work in an docker container, but will also work on any linux distribution.
 
+Feel free to change the code to your needs.
+
 ## Flow
 1. Connect to WebDAV Application and get file list
 2. Download all audio files which are without .srt, and download all .srt which are without .lrc
