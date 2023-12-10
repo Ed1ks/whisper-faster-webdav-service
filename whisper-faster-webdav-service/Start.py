@@ -22,7 +22,7 @@ sys.path.insert(0, os.getcwd())
 audio_dir = 'audio'
 upload_dir = 'upload'
 whisper_model_dir = 'whisper_models'
-transcribe_formats = ['.mp3', '.m4a', '.wav', '.ogg', '.3gp', '.aac', 'wma']
+transcribe_formats = ['.mp3', '.m4a', '.wav', '.ogg', '.3gp', '.aac', '.wma']
 pathlib.Path(audio_dir).mkdir(parents=True, exist_ok=True)
 pathlib.Path(upload_dir).mkdir(parents=True, exist_ok=True)
 pathlib.Path(whisper_model_dir).mkdir(parents=True, exist_ok=True)
