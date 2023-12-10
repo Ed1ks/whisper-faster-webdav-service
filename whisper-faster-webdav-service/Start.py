@@ -211,7 +211,7 @@ class WhisperFasterWebDAVService:
                 os.remove(f'{self.audio_dir}/{file}')
 
                 end = time.time()
-                print(f'transcription of {file} finished in {timedelta(seconds=end-start)} (HH:mm:ss)')
+                print(f'transcription of {file} finished in {datetime.timedelta(seconds=end-start)} (HH:mm:ss)')
             return True
         except (BaseException, ) as e:
             print(e)
