@@ -164,8 +164,8 @@ class WhisperFasterWebDAVService:
             file_list = next(os.walk(self.audio_dir))[2]
             audio_file_list = [x for x in file_list if x[-4:] in transcribe_formats]
             if len(audio_file_list) > 0:
-                model_dir = download_model(self.whisper_model, output_dir=self.whisper_model_dir + '/' + self.whisper_model)
-                model = WhisperModel(model_dir, device="cpu", compute_type="auto", cpu_threads=1)
+                model_dir = self.whisper_model_dir + '/' + self.whisper_model
+                model = WhisperModel(self.whisper_model, device="cpu", compute_type="auto", cpu_threads=1, download_root=model_dir)
 
             for file in audio_file_list:
                 print('transcribe ' + file + '...')
@@ -250,6 +250,7 @@ if __name__ == '__main__':
     try:
         runonstart = os.environ['W_RUN_ON_START']
         if runonstart:
+            print('run on startup is activated')
             service.run()
     except (BaseException, ):
         pass
@@ -261,6 +262,7 @@ if __name__ == '__main__':
     schedule.every().day.at("22:00").do(service.run)
 
     print('Schedules are set and waiting for run')
+    
     print('first schedule-run in: ' + str(schedule.idle_seconds()) + 's')
     while True:
         schedule.run_pending()
