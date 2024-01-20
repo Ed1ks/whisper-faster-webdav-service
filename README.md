@@ -5,7 +5,9 @@ This is an service for audio transcription on an different server, than those au
 It connects with webdav (e.g. nexcloud, filerun,...), downloads audio files which are without .srt and transcribes them using whisper-faster to an .srt file and converts that to an .lrc file.
 Both - the .srt and the .lrc files will be uploaded back to the webdav application.
 
-This is an service meant to work in an docker container.
+This is an service meant to work in an docker container, but will also work on any linux distribution.
+
+Feel free to change the code to your needs.
 
 ## Flow
 1. Connect to WebDAV Application and get file list
