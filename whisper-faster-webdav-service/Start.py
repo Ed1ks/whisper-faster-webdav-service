@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 from faster_whisper import WhisperModel, download_model
 import easywebdav
+
 easywebdav.basestring = str
 easywebdav.client.basestring = str
 import urllib
@@ -27,6 +28,7 @@ pathlib.Path(audio_dir).mkdir(parents=True, exist_ok=True)
 pathlib.Path(upload_dir).mkdir(parents=True, exist_ok=True)
 pathlib.Path(whisper_model_dir).mkdir(parents=True, exist_ok=True)
 
+
 class WhisperFasterWebDAVService:
     def __init__(self):
         global audio_dir
@@ -41,9 +43,10 @@ class WhisperFasterWebDAVService:
         self.username = os.environ['W_USERNAME']
         self.password = os.environ['W_PASSWORD']
         self.root_path = os.environ['W_ROOT_PATH']
+        self.root_path = self.root_path[:-1] if self.root_path[-1] == '/' else self.root_path
         try:
             self.whisper_model = os.environ['W_WHISPER_MODEL']
-        except (BaseException, ):
+        except (BaseException,):
             self.whisper_model = 'large-v2'
 
     def run(self):
@@ -51,7 +54,7 @@ class WhisperFasterWebDAVService:
         success = True
         # Upload all files in upload dir (leftovers)
         success = self.upload_srt_and_lrc_files(skip_files=[])
-        
+
         if success:
             # download files which to be transcribed or formated to .lrc
             print('starting downloading files...')
@@ -67,7 +70,7 @@ class WhisperFasterWebDAVService:
                 print('error while transcription')
         else:
             print(f'no files for transcription found')
-        
+
         if success:
             # format .srt files to .lrc
             print('formating .srt to .lrc...')
@@ -85,20 +88,22 @@ class WhisperFasterWebDAVService:
 
             # upload
             print('uploading files...')
-            success = self.upload_srt_and_lrc_files(skip_files = srt_files_without_lrc)
+            success = self.upload_srt_and_lrc_files(skip_files=srt_files_without_lrc)
             if success:
                 print('successfully uploaded')
             else:
                 print('error while uplading')
 
         print('service done')
+
     def download_audio_and_srt_files(self):
         # Download audio files, if no .srt file with same name exists - for transcribe
         # download .srt files, if audio exists with same name but no .lrc with same name - to format into .lrc files
 
         # a = urllib.parse.unquote(.name)
         try:
-            webdav = easywebdav.connect(host=self.host, username=self.username, password=self.password, protocol='https')
+            webdav = easywebdav.connect(host=self.host, username=self.username, password=self.password,
+                                        protocol='https')
             file_list = webdav.ls(self.root_path)
 
             audio_file_list = []
@@ -153,9 +158,9 @@ class WhisperFasterWebDAVService:
                 print('Download ' + srt_file_name)
                 webdav.download(self.root_path + '/' + srt_file_name, self.audio_dir + '/' + srt_file_name)
             return (audio_files_whithout_srt, srt_files_without_lrc)
-        except (BaseException, ) as e:
+        except (BaseException,) as e:
             print(e)
-        
+
         return ([], [])
 
     def transcribe_directory_files(self):
@@ -164,7 +169,8 @@ class WhisperFasterWebDAVService:
             file_list = next(os.walk(self.audio_dir))[2]
             audio_file_list = [x for x in file_list if x[-4:] in transcribe_formats]
             if len(audio_file_list) > 0:
-                model_dir = download_model(self.whisper_model, output_dir=self.whisper_model_dir + '/' + self.whisper_model)
+                model_dir = download_model(self.whisper_model,
+                                           output_dir=self.whisper_model_dir + '/' + self.whisper_model)
                 model = WhisperModel(model_dir, device="cpu", compute_type="auto", cpu_threads=1)
 
             for file in audio_file_list:
@@ -175,27 +181,27 @@ class WhisperFasterWebDAVService:
 
                 name = file[:-4]
 
-                segments, info = model.transcribe(f'{self.audio_dir}/{file}', 
-                                    temperature=0,
-                                    best_of=5,
-                                    beam_size=5,
-                                    patience=1,
-                                    length_penalty=1,
-                                    no_repeat_ngram_size=0,
-                                    prompt_reset_on_temperature=0.5,
-                                    compression_ratio_threshold=2.4,
-                                    log_prob_threshold=-1,
-                                    no_speech_threshold=0.6,
-                                    vad_filter=True,
-                                    vad_parameters=dict(
-                                        min_speech_duration_ms=350,
-                                        threshold=0.45,
-                                        min_silence_duration_ms=3200,
-                                        speech_pad_ms=900,
-                                        window_size_samples=1536
-                                        ),
-                                    language="de",
-                                    )
+                segments, info = model.transcribe(f'{self.audio_dir}/{file}',
+                                                  temperature=0,
+                                                  best_of=5,
+                                                  beam_size=5,
+                                                  patience=1,
+                                                  length_penalty=1,
+                                                  no_repeat_ngram_size=0,
+                                                  prompt_reset_on_temperature=0.5,
+                                                  compression_ratio_threshold=2.4,
+                                                  log_prob_threshold=-1,
+                                                  no_speech_threshold=0.6,
+                                                  vad_filter=True,
+                                                  vad_parameters=dict(
+                                                      min_speech_duration_ms=350,
+                                                      threshold=0.45,
+                                                      min_silence_duration_ms=3200,
+                                                      speech_pad_ms=900,
+                                                      window_size_samples=1536
+                                                  ),
+                                                  language="de",
+                                                  )
 
                 results = []
                 for segment in segments:
@@ -211,9 +217,9 @@ class WhisperFasterWebDAVService:
                 os.remove(f'{self.audio_dir}/{file}')
 
                 end = time.time()
-                print(f'transcription of {file} finished in {timedelta(seconds=end-start)} (HH:mm:ss)')
+                print(f'transcription of {file} finished in {timedelta(seconds=end - start)} (HH:mm:ss)')
             return True
-        except (BaseException, ) as e:
+        except (BaseException,) as e:
             print(e)
             return False
 
@@ -221,14 +227,16 @@ class WhisperFasterWebDAVService:
         global transcribe_formats
         try:
             file_list = next(os.walk(self.upload_dir))[2]
-            upload_file_list = [x for x in file_list if (x.endswith('.srt') and not x in skip_files) or x.endswith('.lrc')]
+            upload_file_list = [x for x in file_list if
+                                (x.endswith('.srt') and not x in skip_files) or x.endswith('.lrc')]
             print(upload_file_list)
 
             # skip if upload/ is empty
             if len(upload_file_list) == 0:
                 return True
 
-            webdav = easywebdav.connect(host=self.host, username=self.username, password=self.password, protocol='https')
+            webdav = easywebdav.connect(host=self.host, username=self.username, password=self.password,
+                                        protocol='https')
             for file in file_list:
                 # skip audio files
                 if file[-4:] in transcribe_formats:
@@ -239,19 +247,20 @@ class WhisperFasterWebDAVService:
                     webdav.upload(f'{self.upload_dir}/{file}', f'{self.root_path}/{file}')
                 os.remove(f'{self.upload_dir}/{file}')
             return True
-        except (BaseException, ) as e:
+        except (BaseException,) as e:
             print(e)
             return False
+
 
 if __name__ == '__main__':
     load_dotenv()
     service = WhisperFasterWebDAVService()
-    
+
     try:
         runonstart = os.environ['W_RUN_ON_START']
         if runonstart:
             service.run()
-    except (BaseException, ):
+    except (BaseException,):
         pass
 
     # add here schedules
