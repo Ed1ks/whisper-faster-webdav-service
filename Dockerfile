@@ -1,7 +1,18 @@
-FROM python:3.11
+FROM python:3.11-slim-bullseye
+ENV PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PUID=1000\
+    PGID=1000
+
+WORKDIR /whisper-faster-webdav-service
+COPY . .
+COPY requirements.txt ./
 
 RUN pip install schedule faster-whisper easywebdav pysubs2
 WORKDIR whisper-faster-webdav-service
+
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["python", "Start.py"]
 # Or enter the name of your unique directory and parameter set.
 

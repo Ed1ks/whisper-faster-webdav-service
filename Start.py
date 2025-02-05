@@ -43,7 +43,6 @@ class WhisperFasterWebDAVService:
         self.username = os.environ['W_USERNAME']
         self.password = os.environ['W_PASSWORD']
         self.root_path = os.environ['W_ROOT_PATH']
-        self.root_path = self.root_path[:-1] if self.root_path[-1] == '/' else self.root_path
         try:
             self.whisper_model = os.environ['W_WHISPER_MODEL']
         except (BaseException,):
@@ -53,16 +52,17 @@ class WhisperFasterWebDAVService:
         print('starting service...')
         success = True
         # Upload all files in upload dir (leftovers)
-        success = self.upload_srt_and_lrc_files(skip_files=[])
+        success = self.upload_lrc_files()
+        audio_files_whithout_lrc = []
 
         if success:
             # download files which to be transcribed or formated to .lrc
             print('starting downloading files...')
-            audio_files_whithout_srt, srt_files_without_lrc = self.download_audio_and_srt_files()
+            audio_files_whithout_lrc = self.download_audiofiles()
             print('done')
-        if len(audio_files_whithout_srt) > 0:
+        if len(audio_files_whithout_lrc) > 0:
             # transcribe audio files
-            print(f'transcribe {len(audio_files_whithout_srt)} files')
+            print(f'transcribe {len(audio_files_whithout_lrc)} files')
             success = self.transcribe_directory_files()
             if success:
                 print('successfully transcribed')
@@ -88,7 +88,7 @@ class WhisperFasterWebDAVService:
 
             # upload
             print('uploading files...')
-            success = self.upload_srt_and_lrc_files(skip_files=srt_files_without_lrc)
+            success = self.upload_lrc_files()
             if success:
                 print('successfully uploaded')
             else:
@@ -96,9 +96,8 @@ class WhisperFasterWebDAVService:
 
         print('service done')
 
-    def download_audio_and_srt_files(self):
-        # Download audio files, if no .srt file with same name exists - for transcribe
-        # download .srt files, if audio exists with same name but no .lrc with same name - to format into .lrc files
+    def download_audiofiles(self):
+        # Download audio files, if no .lrc file with same name exists - for transcribe
 
         # a = urllib.parse.unquote(.name)
         try:
@@ -107,7 +106,6 @@ class WhisperFasterWebDAVService:
             file_list = webdav.ls(self.root_path)
 
             audio_file_list = []
-            srt_file_list = []
             lrc_file_list = []
             # check existant of lyrics files
             for file in file_list:
@@ -116,52 +114,24 @@ class WhisperFasterWebDAVService:
                 file_name = urllib.parse.unquote(file.name).split('/')[-1]
                 if 'audio' in file.contenttype:
                     audio_file_list.append(file_name)
-                elif file_name.endswith('srt'):
-                    srt_file_list.append(file_name)
                 elif file_name.endswith('lrc'):
                     lrc_file_list.append(file_name)
 
-            audio_files_whithout_srt = []  # convert audio to srt list
-            srt_files_without_lrc = []  # convert audio to lrc list
+            audio_files_whithout_lrc = []  # convert audio to lrc list
             for audio_file_name in audio_file_list:
-                exists_srt = False
-                for srt_file_name in srt_file_list:
-                    if f'{audio_file_name[:-4]}.srt' == srt_file_name:
-                        exists_srt = True
-                        break
-                if not exists_srt:
-                    audio_files_whithout_srt.append(audio_file_name)
-            for srt_file_name in srt_file_list:
-                exists_audio_file = False
-                for audio_file_name in audio_file_list:
-                    if f'{audio_file_name[:-4]}.srt' == srt_file_name:
-                        exists_audio_file = True
-                        break
-                if not exists_audio_file:
-                    continue
-
-                exists_lrc_file = False
-                for lrc_file_name in lrc_file_list:
-                    if f'{srt_file_name[:-4]}.lrc' == lrc_file_name:
-                        exists_lrc_file = True
-                        break
-
-                if not exists_lrc_file:
-                    srt_files_without_lrc.append(srt_file_name)
+                if f'{audio_file_name[:-4]}.lrc' not in lrc_file_list:
+                    audio_files_whithout_lrc.append(audio_file_name)
 
             # Download files
-            for audio_file_name in audio_files_whithout_srt:
+            for audio_file_name in audio_files_whithout_lrc:
                 print('Download ' + audio_file_name)
                 # file = next(urllib.parse.unquote(file.name).split('/')[-1] for file in file_list if urllib.parse.unquote(file.name).split('/')[-1] == audio_file_name)
                 webdav.download(self.root_path + '/' + audio_file_name, self.audio_dir + '/' + audio_file_name)
-            for srt_file_name in srt_files_without_lrc:
-                print('Download ' + srt_file_name)
-                webdav.download(self.root_path + '/' + srt_file_name, self.audio_dir + '/' + srt_file_name)
-            return (audio_files_whithout_srt, srt_files_without_lrc)
+            return audio_files_whithout_lrc
         except (BaseException,) as e:
             print(e)
 
-        return ([], [])
+        return []
 
     def transcribe_directory_files(self):
         try:
@@ -169,9 +139,9 @@ class WhisperFasterWebDAVService:
             file_list = next(os.walk(self.audio_dir))[2]
             audio_file_list = [x for x in file_list if x[-4:] in transcribe_formats]
             if len(audio_file_list) > 0:
-                model_dir = download_model(self.whisper_model,
-                                           output_dir=self.whisper_model_dir + '/' + self.whisper_model)
-                model = WhisperModel(model_dir, device="cpu", compute_type="auto", cpu_threads=1)
+                model_dir = self.whisper_model_dir + '/' + self.whisper_model
+                model = WhisperModel(self.whisper_model, device="cpu", compute_type="auto", cpu_threads=1,
+                                     download_root=model_dir)
 
             for file in audio_file_list:
                 print('transcribe ' + file + '...')
@@ -217,18 +187,17 @@ class WhisperFasterWebDAVService:
                 os.remove(f'{self.audio_dir}/{file}')
 
                 end = time.time()
-                print(f'transcription of {file} finished in {timedelta(seconds=end - start)} (HH:mm:ss)')
+                print(f'transcription of {file} finished in {datetime.timedelta(seconds=end - start)} (HH:mm:ss)')
             return True
         except (BaseException,) as e:
             print(e)
             return False
 
-    def upload_srt_and_lrc_files(self, skip_files):
+    def upload_lrc_files(self):
         global transcribe_formats
         try:
             file_list = next(os.walk(self.upload_dir))[2]
-            upload_file_list = [x for x in file_list if
-                                (x.endswith('.srt') and not x in skip_files) or x.endswith('.lrc')]
+            upload_file_list = [x for x in file_list if x.endswith('.lrc')]
             print(upload_file_list)
 
             # skip if upload/ is empty
@@ -242,10 +211,14 @@ class WhisperFasterWebDAVService:
                 if file[-4:] in transcribe_formats:
                     continue
 
-                if file not in skip_files:
-                    print('Upload ' + file)
-                    webdav.upload(f'{self.upload_dir}/{file}', f'{self.root_path}/{file}')
+                print('Upload ' + file)
+                webdav.upload(f'{self.upload_dir}/{file}', f'{self.root_path}/{file}')
                 os.remove(f'{self.upload_dir}/{file}')
+
+                # delete .srt file
+                srt_file = file[:-3] + 'srt'
+                if len(file) > 4 and os.path.isfile(f'{self.upload_dir}/{srt_file}'):
+                    os.remove(f'{self.upload_dir}/{srt_file}')
             return True
         except (BaseException,) as e:
             print(e)
@@ -258,7 +231,8 @@ if __name__ == '__main__':
 
     try:
         runonstart = os.environ['W_RUN_ON_START']
-        if runonstart:
+        if runonstart.lower().strip() == 'true':
+            print('run on startup is activated')
             service.run()
     except (BaseException,):
         pass
@@ -270,6 +244,7 @@ if __name__ == '__main__':
     schedule.every().day.at("22:00").do(service.run)
 
     print('Schedules are set and waiting for run')
+
     print('first schedule-run in: ' + str(schedule.idle_seconds()) + 's')
     while True:
         schedule.run_pending()
